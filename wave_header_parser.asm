@@ -1,7 +1,7 @@
 .data
     file_name_prompt: .asciiz "Enter a wave file name:\n"
     file_name: .space 50
-    buffer: .space 132344
+    buffer: .space 44
 
     file_size_prompt: .asciiz "Enter the file size (in bytes):\n"
 
@@ -9,7 +9,9 @@
     out_lines: .asciiz "================================\n"
 
     error_msg: .asciiz "Error: Could not open file.\n"
-
+    db1: .asciiz "\n1: "
+    db2: .asciiz "\n2: "
+    db3: .asciiz "\n3: "
 .text
 main:
     #asking for a wave file name/path
@@ -47,6 +49,15 @@ open_file:      #open file to read
     syscall         #file descriptor will be storeed in $v0, code indicating whether opening was successful
     move $t1, $v0   #free $v0, keep file descriptor for later use
 
+ ##################################3   
+    li $v0, 4
+    la $a0, db1
+    syscall
+
+    li $v0, 1
+    move $a0, $t1
+    syscall
+ ###################################   
     #check if the fole open was succeffull
     bgez $t1, read_file     #if $t1 >= 0, then read the file else continue
 
@@ -62,18 +73,39 @@ read_file:
     #la $a0, file_name
     move $a0, $t1       #file descritpor
     la $a1, buffer      #holds the string of the entire file
-    move $a2, $t0       #number of bytes to read
+    li $a2, 44       #number of bytes to read
     syscall
 
-see_data_from_file:
-    li $v0, 4
-    la $a0, buffer
-    syscall
-
-close_file:
+    close_file:
     li $v0, 16
     move $a0, $t1
     syscall
+
+##########################
+    li $v0, 4
+    la $a0, db2
+    syscall
+
+    li $v0, 1
+    move $a0, $v0
+    syscall
+############################
+    # Extract number of channels (2 bytes) from address 22-24 in the buffer
+    la $t2, buffer      # Load buffer address into $t2
+    #addi $t2, $t2, 22   # Move to the 22nd byte (number of channels)
+
+    lw $t3, 24($t2)      # Load the 2-byte halfword (number of channels) from address 22-23
+###########################
+    li $v0, 4
+    la $a0, db3
+    syscall
+###########################
+    # Print the number of channels
+    li $v0, 1           # syscall for printing an integer
+    move $a0, $t3       # Move number of channels to $a0
+    syscall
+
+
     j exit
 
 remove_newline:
@@ -89,7 +121,7 @@ find_newline:   #looping thre the string char by char to find '\n'
 
 
 remove_it:
-    sb $t2, 0($a0)      #now replacing newline with null terminator
+    sb $zero,0($a0)      #now replacing newline with null terminator
 
 end_remove_newline:
     jr $ra          # jump to $ra - return to line 29
