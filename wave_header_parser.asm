@@ -82,6 +82,13 @@ read_file:
     move $a0, $t1
     syscall
 
+    #extract the info and calc byte rate
+    jal get_numOfChannels
+    jal get_sampleRate
+    jal get_bitsPerSample
+
+    j exit
+
 # Extract number of channels (2 bytes) from address 22-24 in the buffer
 get_numOfChannels:
     la $t2, buffer      # Load buffer address into $t2
@@ -106,7 +113,7 @@ get_numOfChannels:
     move $a0, $t3       # Move number of channels to $a0
     syscall
 
-    #jal get_bitsPerSample
+    jr $ra
 
 #Extract sample rate from bytes 24-27 (4 bytes), little indian format
 get_sampleRate:
@@ -134,13 +141,22 @@ print_sampleRate:
     move $a0, $t3
     syscall
 
-#Calculate byte rate: br = sr*noOfChan*bps
-get_byteRate:
-    #addi $t2, $t2, 28       #move to the 28th byte
+    jr $ra
 
-    mul $t7, $t7, $t3       #   product of numOfChan(t7) * samplerate times the bps (t3)
+#extract bits per sample from address 34-35 (2 bytes)
+get_bitsPerSample:
 
-    #print byte rate
+    lb $t3, 34($t2)
+    lb $t4, 35($t2)
+
+    sll $t4, $t4, 8
+    or $t3, $t3, $t4
+
+    # jal get_byteRate
+    mul $t7, $t7, $t3       # now multiply with bits per sample to get byte rate
+
+# print byte rate
+print_byteRate:
     li $v0, 4
     la $a0, db4
     syscall
@@ -149,22 +165,8 @@ get_byteRate:
     move $a0, $t7
     syscall
 
-    jr $ra
-
-#extract bits per sample from address 34-35 (2 bytes)
-get_bitsPerSample:
-    addi $t2, $t2, 34   #move to 34th byte
-
-    lb $t3, 0($t2)
-    lb $t4, 1($t2)
-
-    sll $t4, $t4, 8
-    or $t3, $t3, $t4
-
-    addi $t2, $t2, -34
-
-    jal get_byteRate
-
+#print bits per sample
+print_bitPerSample:
     li $v0, 4
     la $a0, db5
     syscall
@@ -173,7 +175,24 @@ get_bitsPerSample:
     move $a0, $t3
     syscall
 
-    j exit
+    jr $ra
+
+#Calculate byte rate: br = sr*noOfChan*bps
+# get_byteRate:
+#     #addi $t2, $t2, 28       #move to the 28th byte
+
+#     mul $t7, $t7, $t3       #   product of numOfChan(t7) * samplerate times the bps (t3)
+
+#     #print byte rate
+#     li $v0, 4
+#     la $a0, db4
+#     syscall
+
+#     li $v0, 1
+#     move $a0, $t7
+#     syscall
+
+#     jr $ra
 
 
 remove_newline:
